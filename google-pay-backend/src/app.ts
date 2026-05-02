@@ -2,7 +2,7 @@ import express, {Application, Request, Response} from "express";
 import dotenv from "dotenv";
 dotenv.config();
 import cookieParser from "cookie-parser";
-// import routes from "./routes";
+import routes from "./routes";
 
 const app = express();
 app.use(express.json());
@@ -17,6 +17,6 @@ app.get("/health", (_req: Request, res: Response) => {
     });
   });
 
-// app.use("/api", routes);
+app.use("/api", routes);
   
 export default app;
