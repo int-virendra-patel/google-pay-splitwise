@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import {
   createTransaction,
@@ -6,26 +6,59 @@ import {
   getTransactionWithUser,
 } from "../model/transaction.model";
 
+const getAuthenticatedUserId = (
+  req: AuthRequest,
+  res: Response,
+): string | null => {
+  if (!req.user) {
+    res.status(401).json({ message: "Unauthorized" });
+    return null;
+  }
+  return req.user.userId;
+};
+
+const handleServerError = (res: Response, error: any) => {
+  console.error(error);
+  return res.status(error.status ?? 500).json({
+    message: error.message ?? "Internal Server Error",
+  });
+};
+
+const isValidUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+
 export const createTransactionController = async (
   req: AuthRequest,
   res: Response,
 ) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+    const fromUserId = getAuthenticatedUserId(req, res);
+    if (!fromUserId) return;
+
+    const { to_user: toUserId, amount, type } = req.body;
+    const transactionAmount = Number(amount);
+
+    if (!isValidUuid(toUserId)) {
+      return res.status(400).json({ message: "Invalid to_user id" });
     }
-    const from_user = req.user.userId;
-    const { to_user, amount, type } = req.body;
-    const data = await createTransaction(from_user, to_user, amount, type);
+    if (!Number.isFinite(transactionAmount) || transactionAmount <= 0) {
+      return res.status(400).json({ message: "Amount must be greater than 0" });
+    }
+
+    const data = await createTransaction(
+      fromUserId,
+      toUserId,
+      transactionAmount,
+      type,
+    );
     return res.status(201).json({
       data,
       message: "Transaction Created Successfully!",
     });
   } catch (error: any) {
-    console.error(error);
-    return res.status(error.status ?? 500).json({
-      message: error.message ?? "Internal Server Error",
-    });
+    return handleServerError(res, error);
   }
 };
 
@@ -34,12 +67,16 @@ export const getTransactionWithUserController = async (
   res: Response,
 ) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+    const fromUserId = getAuthenticatedUserId(req, res);
+    if (!fromUserId) return;
+
+    const toUserId = req.params.id as string;
+
+    if (!isValidUuid(toUserId)) {
+      return res.status(400).json({ message: "Invalid user id" });
     }
-    const from_user = req.user.userId;
-    const to_user = req.params.id as string;
-    const data = await getTransactionWithUser(from_user, to_user);
+
+    const data = await getTransactionWithUser(fromUserId, toUserId);
 
     if (!data || data.length === 0) {
       return res.status(404).json({
@@ -48,15 +85,12 @@ export const getTransactionWithUserController = async (
       });
     }
 
-    return res.status(201).json({
+    return res.status(200).json({
       data,
       message: `Transaction fetched Successfully!`,
     });
   } catch (error: any) {
-    console.error(error);
-    return res.status(error.status ?? 500).json({
-      message: error.message ?? "Internal Server Error",
-    });
+    return handleServerError(res, error);
   }
 };
 
@@ -65,10 +99,9 @@ export const getMyTransactionsController = async (
   res: Response,
 ) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    const userId = req.user.userId;
+    const userId = getAuthenticatedUserId(req, res);
+    if (!userId) return;
+
     const data = await getMyTransactions(userId);
 
     if (!data || data.length === 0) {
@@ -78,14 +111,11 @@ export const getMyTransactionsController = async (
       });
     }
 
-    return res.status(201).json({
+    return res.status(200).json({
       data,
       message: `Transaction fetched Successfully!`,
     });
   } catch (error: any) {
-    console.error(error);
-    return res.status(error.status ?? 500).json({
-      message: error.message ?? "Internal Server Error",
-    });
+    return handleServerError(res, error);
   }
 };

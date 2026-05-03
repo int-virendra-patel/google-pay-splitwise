@@ -1,21 +1,23 @@
 import { pool } from "../config/db";
+import { settlePaymentDebt } from "./expense.model";
 
 export const createTransaction = async (
-  from_user: string,
-  to_user: string,
+  fromUserId: string,
+  toUserId: string,
   amount: number,
   type: string,
 ) => {
   const result = await pool.query(
     `INSERT INTO transactions (from_user, to_user, amount, type) VALUES ($1, $2, $3, $4) RETURNING *`,
-    [from_user, to_user, amount, type],
+    [fromUserId, toUserId, amount, type],
   );
+  await settlePaymentDebt(fromUserId, toUserId, amount);
   return result.rows[0];
 };
 
 export const getTransactionWithUser = async (
-  from_user: string,
-  to_user: string,
+  fromUserId: string,
+  toUserId: string,
 ) => {
   const result = await pool.query(
     `SELECT 
@@ -35,7 +37,7 @@ export const getTransactionWithUser = async (
     OR
     (t.from_user = $2 AND t.to_user = $1)
     ORDER BY t.created_at DESC`,
-    [from_user, to_user],
+    [fromUserId, toUserId],
   );
   return result.rows;
 };

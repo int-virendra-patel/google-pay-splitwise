@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { findUserByEmail } from "../model/auth.model";
 import { AuthRequest } from "../middleware/auth.middleware";
@@ -11,7 +10,7 @@ export const login = async (
   res: Response,
 ) => {
   try {
-    const { email, password } = req.body;
+    const { email } = req.body;
 
     const user = await findUserByEmail(email);
 
@@ -20,14 +19,6 @@ export const login = async (
         message: "User not found",
       });
     }
-
-    // const match = await bcrypt.compare(password, user.password);
-
-    // if (!match) {
-    //   return res.status(400).json({
-    //     message: "Invalid credentials",
-    //   });
-    // }
 
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET missing");

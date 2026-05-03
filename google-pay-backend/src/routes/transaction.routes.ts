@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 router.post("/create", auth, createTransactionController);
-router.get("/:id", auth, getTransactionWithUserController);
 router.get("/my", auth, getMyTransactionsController);
+router.get("/:id", auth, getTransactionWithUserController);
 
 export default router;
