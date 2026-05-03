@@ -7,3 +7,4 @@ export const findUserByEmail = async (email: string) => {
   );
   return result.rows[0];
 };
+
